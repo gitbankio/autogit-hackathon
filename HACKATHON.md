@@ -1,15 +1,15 @@
 # AutoGit Hackathon
 
-Submit a prompt template for AutoGit, get paid automatically when your PR merges.
+Submit a prompt template for AutoGit, get paid automatically in gitUSDC when your PR merges.
 
 ## Rewards
 
 | Reward | Amount | How |
 |---|---|---|
-| Every accepted entry | 5 USDC | Auto-sent the moment your PR merges |
-| Best template (team pick) | 300 USDC | Announced after the hackathon closes |
-| 2nd best (team pick) | 200 USDC | Announced after the hackathon closes |
-| 3rd best (team pick) | 100 USDC | Announced after the hackathon closes |
+| Every accepted entry | 5 gitUSDC | Auto-deposited into your Gitbank vault the moment your PR merges |
+| Best template (team pick) | 300 gitUSDC | Announced after the hackathon closes |
+| 2nd best (team pick) | 200 gitUSDC | Announced after the hackathon closes |
+| 3rd best (team pick) | 100 gitUSDC | Announced after the hackathon closes |
 
 Total slots: **100 entries**. First come, first served.
 
@@ -20,7 +20,7 @@ Total slots: **100 entries**. First come, first served.
 3. Create a new file in `templates/` named after your app type, for example `templates/saas-dashboard.md`.
 4. Fill in the frontmatter and write your prompt. See [templates/example-landing-page.md](templates/example-landing-page.md) for the format.
 5. Open a PR. Fill out the PR template completely.
-6. The bot validates your submission automatically. If it passes, your PR is auto-merged and 5 USDC is sent to your wallet on Base.
+6. The bot validates your submission automatically. If it passes, your PR is auto-merged and 5 gitUSDC is deposited into your Gitbank vault on Base.
 
 ## Template format
 
@@ -40,7 +40,7 @@ Your system prompt content here...
 |---|---|
 | `title` | Human-readable name for your template |
 | `app_type` | Unique kebab-case identifier (e.g. `saas-dashboard`, `portfolio`) |
-| `wallet` | Your Base wallet address where the 5 USDC reward is sent |
+| `wallet` | Your Base wallet address, used as the owner of your Gitbank vault |
 
 ## Validation rules
 
@@ -68,7 +68,14 @@ If the output requires fixing to compile, the template will not be accepted.
 
 ## Payment
 
-Payment is sent automatically to the `wallet` address in your template file. The payment is an ERC-20 USDC transfer on Base mainnet. You only need a valid Base wallet address to receive it.
+When your PR merges, the bot automatically:
+
+1. Deploys a Gitbank vault on Base mainnet for your GitHub account (if you do not have one yet)
+2. Deposits 5 gitUSDC into your vault
+
+gitUSDC is a soul-bound position in your Gitbank vault on Base. You can withdraw it to any address at any time using `@gitbankbot withdraw 5 USDC to 0xYourAddress` in any GitHub issue or PR where the bot is installed.
+
+No gas required. The deployer pays all transaction fees.
 
 ## Top 3 prizes
 
@@ -78,7 +85,7 @@ After the hackathon closes (all 100 slots filled or announced end date), the Git
 - Prompt clarity and specificity
 - Usefulness of the app type for real projects
 
-Winners are announced in the [hackathon thread](https://github.com/gitbankio/autogit-hackathon/issues/1) and paid to the wallet in their template file.
+Winners are announced in the [hackathon thread](https://github.com/gitbankio/autogit-hackathon/issues/1) and paid to their Gitbank vault.
 
 ## Questions
 
