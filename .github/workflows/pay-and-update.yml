@@ -148,10 +148,10 @@ jobs:
               body: [
                 `**Entry #${entryNumber} accepted. Reward sent.**`,
                 ``,
-                `5 USDC has been sent to your wallet on Base.`,
+                `5 gitUSDC has been deposited into your Gitbank vault on Base.`,
                 ``,
                 `Transaction: https://basescan.org/tx/${txHash}`,
                 ``,
-                `You are now on the [participant list](https://gitbankio.github.io/autogit-templates/).`,
+                `You are now on the [participant list](https://gitbankio.github.io/autogit-hackathon/).`,
               ].join('\n'),
             });
