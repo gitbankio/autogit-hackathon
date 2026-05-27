@@ -115,8 +115,13 @@ jobs:
               }
             }
 
+            // Fetch participants.json from main (not from the potentially stale fork branch)
             let participants = [];
-            try { participants = JSON.parse(fs.readFileSync('data/participants.json', 'utf8')); } catch {}
+            try {
+              const { execSync } = require('child_process');
+              const raw = execSync('git show origin/main:data/participants.json 2>/dev/null || echo "[]"').toString();
+              participants = JSON.parse(raw);
+            } catch { participants = []; }
 
             if (participants.length >= 100) {
               return await reject('The hackathon is full. All 100 slots have been filled. Thank you for participating!');
