@@ -529,15 +529,15 @@ const html = `<!DOCTYPE html>
             <div class="r-desc">Every entry<br>Auto-paid on merge</div>
           </div>
           <div class="r-card gold1">
-            <div class="r-amount">300 USDC</div>
+            <div class="r-amount">300 gitUSDC</div>
             <div class="r-desc">Best template<br>Team pick</div>
           </div>
           <div class="r-card gold2">
-            <div class="r-amount">200 USDC</div>
+            <div class="r-amount">200 gitUSDC</div>
             <div class="r-desc">2nd best<br>Team pick</div>
           </div>
           <div class="r-card gold3">
-            <div class="r-amount">100 USDC</div>
+            <div class="r-amount">100 gitUSDC</div>
             <div class="r-desc">3rd best<br>Team pick</div>
           </div>
         </div>
