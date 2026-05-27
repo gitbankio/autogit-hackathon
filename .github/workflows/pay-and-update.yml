@@ -1,0 +1,157 @@
+name: Pay Reward and Update Participant List
+
+on:
+  pull_request_target:
+    types: [closed]
+    paths:
+      - 'templates/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  pay:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Checkout main (post-merge) to read the merged template file and participants list
+          ref: main
+          fetch-depth: 2
+
+      - name: Get merged template file
+        id: template
+        run: |
+          FILE=$(git show --name-only --format='' HEAD -- 'templates/*.md' | head -1)
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+          echo "Found file: $FILE"
+
+      - name: Parse template, call payment API, update list
+        id: pay
+        uses: actions/github-script@v7
+        env:
+          CONTEST_API_SECRET: ${{ secrets.CONTEST_API_SECRET }}
+          CONTEST_API_URL: ${{ secrets.CONTEST_API_URL }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            const filePath = `${{ steps.template.outputs.file }}`.trim();
+            if (!filePath) {
+              console.log('No template file found in this merge. Skipping payment.');
+              return;
+            }
+
+            if (!fs.existsSync(filePath)) {
+              console.log(`File not found: ${filePath}. Skipping.`);
+              return;
+            }
+
+            const content = fs.readFileSync(filePath, 'utf8');
+            const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            if (!fmMatch) {
+              console.log('No frontmatter in merged file. Skipping payment.');
+              return;
+            }
+
+            const fm = {};
+            for (const line of fmMatch[1].split('\n')) {
+              const ci = line.indexOf(':');
+              if (ci === -1) continue;
+              fm[line.slice(0, ci).trim()] = line.slice(ci + 1).trim();
+            }
+
+            const pr = context.payload.pull_request;
+            const body = {
+              github_id: pr.user.id,
+              github_login: pr.user.login,
+              wallet: fm.wallet,
+              template_title: fm.title,
+              app_type: fm.app_type,
+              pr_number: pr.number,
+              pr_url: pr.html_url,
+            };
+
+            const apiUrl = process.env.CONTEST_API_URL || 'https://gitbank.io/api/contest/pay';
+            console.log(`Calling payment API at ${apiUrl}...`);
+
+            let data;
+            try {
+              const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Contest-Secret': process.env.CONTEST_API_SECRET,
+                },
+                body: JSON.stringify(body),
+              });
+              if (!res.ok) {
+                const errText = await res.text();
+                core.setFailed(`Payment API returned ${res.status}: ${errText}`);
+                return;
+              }
+              data = await res.json();
+            } catch (err) {
+              core.setFailed(`Payment API call failed: ${err.message}`);
+              return;
+            }
+
+            console.log(`Payment sent. Entry #${data.entryNumber}, tx: ${data.txHash}`);
+            core.setOutput('tx_hash', data.txHash);
+            core.setOutput('entry_number', String(data.entryNumber));
+
+            let participants = [];
+            try { participants = JSON.parse(fs.readFileSync('data/participants.json', 'utf8')); } catch {}
+
+            participants.push({
+              entry_number: data.entryNumber,
+              github_id: pr.user.id,
+              github_login: pr.user.login,
+              github_avatar: pr.user.avatar_url,
+              template_title: fm.title,
+              app_type: fm.app_type,
+              pr_number: pr.number,
+              pr_url: pr.html_url,
+              tx_hash: data.txHash,
+              paid_at: new Date().toISOString(),
+            });
+
+            fs.writeFileSync('data/participants.json', JSON.stringify(participants, null, 2));
+            console.log('participants.json updated.');
+
+      - name: Rebuild participant list HTML
+        run: node scripts/generate-list.js
+
+      - name: Commit and push updates
+        run: |
+          git config user.name "gitbankbot"
+          git config user.email "285689409+teamgitbank@users.noreply.github.com"
+          git add data/participants.json docs/index.html
+          git diff --cached --quiet && echo "No changes to commit." || git commit -m "add entry #${{ steps.pay.outputs.entry_number }} - @${{ github.event.pull_request.user.login }}"
+          git push
+
+      - name: Comment payment confirmation on PR
+        if: steps.pay.outputs.tx_hash != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const txHash = `${{ steps.pay.outputs.tx_hash }}`;
+            const entryNumber = `${{ steps.pay.outputs.entry_number }}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                `**Entry #${entryNumber} accepted. Reward sent.**`,
+                ``,
+                `5 USDC has been sent to your wallet on Base.`,
+                ``,
+                `Transaction: https://basescan.org/tx/${txHash}`,
+                ``,
+                `You are now on the [participant list](https://gitbankio.github.io/autogit-templates/).`,
+              ].join('\n'),
+            });

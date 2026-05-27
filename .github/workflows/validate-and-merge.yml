@@ -1,0 +1,141 @@
+name: Validate and Auto-merge Template
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'templates/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Checkout the PR contributor's branch to read template files.
+          # Safe: we only read .md files — no code from the fork is executed.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Get added template files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only origin/main...HEAD -- 'templates/*.md' 2>/dev/null || git diff --name-only HEAD~1 -- 'templates/*.md')
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Validate and auto-merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            async function reject(reason) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `**Submission rejected.**\n\n${reason}\n\nRead [HACKATHON.md](../blob/main/HACKATHON.md) for submission guidelines.`,
+              });
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                state: 'closed',
+              });
+              core.setFailed(reason);
+            }
+
+            const rawFiles = `${{ steps.changed.outputs.files }}`.trim();
+            const templateFiles = rawFiles.split('\n').filter(f => f && f.startsWith('templates/') && f.endsWith('.md'));
+
+            if (templateFiles.length === 0) {
+              return await reject('No `.md` file found in the `templates/` folder. Add your template file there.');
+            }
+            if (templateFiles.length > 1) {
+              return await reject('Only one template file is allowed per PR. Submit each template in a separate PR.');
+            }
+
+            const filePath = templateFiles[0];
+
+            if (!fs.existsSync(filePath)) {
+              return await reject(`Could not read file: ${filePath}. Make sure the file exists and is committed.`);
+            }
+
+            const content = fs.readFileSync(filePath, 'utf8');
+
+            const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            if (!fmMatch) {
+              return await reject('Missing frontmatter. Your file must start with a `---` block containing `title`, `app_type`, and `wallet`.');
+            }
+
+            const fm = {};
+            for (const line of fmMatch[1].split('\n')) {
+              const colonIdx = line.indexOf(':');
+              if (colonIdx === -1) continue;
+              const key = line.slice(0, colonIdx).trim();
+              const val = line.slice(colonIdx + 1).trim();
+              if (key) fm[key] = val;
+            }
+
+            if (!fm.title) return await reject('Missing required frontmatter field: `title`');
+            if (!fm.app_type) return await reject('Missing required frontmatter field: `app_type`');
+            if (!fm.wallet) return await reject('Missing required frontmatter field: `wallet`');
+
+            if (!/^0x[0-9a-fA-F]{40}$/.test(fm.wallet)) {
+              return await reject('Invalid `wallet` address. Must be a valid Ethereum/Base address starting with `0x` followed by 40 hex characters.');
+            }
+            if (fm.wallet === '0x0000000000000000000000000000000000000000') {
+              return await reject('Please replace the example wallet address with your real Base wallet address.');
+            }
+
+            const baseName = path.basename(filePath);
+            let existingFiles = [];
+            try { existingFiles = fs.readdirSync('templates').filter(f => f.endsWith('.md') && f !== baseName); } catch {}
+
+            for (const ef of existingFiles) {
+              const ec = fs.readFileSync(`templates/${ef}`, 'utf8');
+              const em = ec.match(/^---\n([\s\S]*?)\n---/);
+              if (!em) continue;
+              const efm = {};
+              for (const line of em[1].split('\n')) {
+                const ci = line.indexOf(':');
+                if (ci === -1) continue;
+                efm[line.slice(0, ci).trim()] = line.slice(ci + 1).trim();
+              }
+              if (efm.app_type && efm.app_type === fm.app_type) {
+                return await reject(`App type \`${fm.app_type}\` is already taken. Check existing templates and choose a different app type.`);
+              }
+            }
+
+            let participants = [];
+            try { participants = JSON.parse(fs.readFileSync('data/participants.json', 'utf8')); } catch {}
+
+            if (participants.length >= 100) {
+              return await reject('The hackathon is full. All 100 slots have been filled. Thank you for participating!');
+            }
+
+            const authorId = context.payload.pull_request.user.id;
+            const existing = participants.find(p => Number(p.github_id) === Number(authorId));
+            if (existing) {
+              return await reject(`Your GitHub account already has an accepted entry (#${existing.entry_number}). Only one entry per GitHub account is allowed.`);
+            }
+
+            console.log('Validation passed. Merging PR...');
+
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: 'squash',
+              commit_title: `add template: ${fm.title} (${fm.app_type})`,
+            });
+
+            console.log('PR merged successfully.');
