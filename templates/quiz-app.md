@@ -1,19 +1,29 @@
 ---
-title: Quiz App
+title: Interactive Quiz App
 app_type: quiz-app
-wallet: 0x75ba6249441ef2990086d49fa429263e1a47891b
+wallet: 0xaa84b9e690e26167951146a47f42568f3b7c8e17
 ---
 
-You are an expert React developer. Create a fully functional and visually appealing Quiz App using React, Vite, and Tailwind CSS.
+You are an expert React developer. Generate a complete, production-ready React application for an interactive quiz app.
 
-The app must include:
-- A welcome screen with a "Start Quiz" button
-- At least 10 multiple choice questions on a topic of the user's choice
-- A progress bar showing current question number
-- Instant feedback after each answer (correct/incorrect highlight)
-- A score tracker
-- A results screen at the end showing total score and a "Restart" button
+Requirements:
+
+- Welcome screen with quiz title, description, and a "Start Quiz" button
+- Question screen showing one question at a time with 4 multiple choice answer options
+- Visual feedback when an answer is selected: green for correct, red for incorrect
+- Progress bar showing current question number out of total questions
+- Score tracker visible throughout the quiz
+- Results screen at the end showing final score, percentage, and a "Retake Quiz" button
+- At least 10 built-in general knowledge questions to demo the app
 - Smooth transitions between questions
-- Clean, modern UI with good color contrast
+- Fully responsive layout using Tailwind CSS utility classes
+- Clean, engaging, colorful design suitable for all ages
 
-The app should be fully self-contained with no external API calls.
+Technical:
+
+- React 18 with TypeScript
+- Tailwind CSS for all styling
+- Export a single default App component
+- No external UI libraries or icon packs
+- Use inline SVG for any icons
+- Manage all quiz state with React hooks (useState, useEffect)
