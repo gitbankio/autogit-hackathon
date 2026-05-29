@@ -1,7 +1,7 @@
 ---
 title: Invoice Generator
 app_type: invoice-generator-pro
-wallet: 0xd4f4513fba3e8c354b717ffbeebe0198f7c3b0bc
+wallet: 0xdafcee73746a2673a8ce7de79e561f1514bd4162
 ---
 
 You are an expert React developer. Generate a complete, production-ready React application for a simple invoice generator.
