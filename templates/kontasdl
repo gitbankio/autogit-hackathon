@@ -1,0 +1,14 @@
+---
+title: kontasdl
+app_type: crypto-research-dashboard
+wallet: 0x05872D51594bf95FFFf14a4789E05B939BA74A2a
+---
+
+# kontasdl
+
+A simple crypto research dashboard template.
+
+Features:
+- project tracker
+- ecosystem notes
+- research board
