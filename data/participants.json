@@ -895,5 +895,31 @@
     "tx_hash": "0x19b92954234790fe09b50202a4afa3b4bfe0cdcaacb0aa37fe1e43212ca18dff",
     "vault_address": "0x04Dfd4D2Da94F32c705c3d57DEac9C931cE59E94",
     "paid_at": "2026-05-29T15:56:53.011Z"
+  },
+  {
+    "entry_number": 70,
+    "github_id": 288990004,
+    "github_login": "wpeggg12-design",
+    "github_avatar": "https://avatars.githubusercontent.com/u/288990004?v=4",
+    "template_title": "Plant Care Tracker",
+    "app_type": "plant-care-tracker",
+    "pr_number": 98,
+    "pr_url": "https://github.com/gitbankio/autogit-hackathon/pull/98",
+    "tx_hash": "0xc1ff9c889c1184e5cf29fbe1addcd61d57faffba0bcac2307130fd74535f2147",
+    "vault_address": "0x115c2106399Fad71F67B4c63e682be14277B450a",
+    "paid_at": "2026-05-29T15:59:43.032Z"
+  },
+  {
+    "entry_number": 71,
+    "github_id": 288964955,
+    "github_login": "dungeondo",
+    "github_avatar": "https://avatars.githubusercontent.com/u/288964955?v=4",
+    "template_title": "Kanban Board",
+    "app_type": "kanban-board",
+    "pr_number": 99,
+    "pr_url": "https://github.com/gitbankio/autogit-hackathon/pull/99",
+    "tx_hash": "0x0e2a3935efee0dab1cfc73851f34c60122512b65f9d451d277498634f212becf",
+    "vault_address": "0x3789F52008992bB138db12935b830B5D4aD9461f",
+    "paid_at": "2026-05-29T16:02:47.943Z"
   }
 ]
