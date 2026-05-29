@@ -1,6 +1,6 @@
 ---
 title: Invoice Generator
-app_type: invoice-generator
+app_type: invoice-generator-pro
 wallet: 0xd4f4513fba3e8c354b717ffbeebe0198f7c3b0bc
 ---
 
