@@ -960,5 +960,18 @@
     "tx_hash": "0x649b0ec553f6bd2d59bea7816213b4344be55762695027252925515be5912aac",
     "vault_address": "0x133d25e77B656b8a8Db27AAF2AeA448343AC7cC5",
     "paid_at": "2026-05-29T16:30:16.766Z"
+  },
+  {
+    "entry_number": 75,
+    "github_id": 288999173,
+    "github_login": "saint10200005-sys",
+    "github_avatar": "https://avatars.githubusercontent.com/u/288999173?v=4",
+    "template_title": "Recipe Cards App",
+    "app_type": "recipe-cards-app",
+    "pr_number": 110,
+    "pr_url": "https://github.com/gitbankio/autogit-hackathon/pull/110",
+    "tx_hash": null,
+    "vault_address": null,
+    "paid_at": null
   }
 ]
