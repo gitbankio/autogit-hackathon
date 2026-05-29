@@ -1,7 +1,7 @@
 ---
 title: Interactive Quiz App
 app_type: quiz-app
-wallet: 0xYOUR_WALLET_ADDRESS_HERE
+wallet: 0x6968e47343bacb5ff1d4f5697b9ad7d1193d5da3
 ---
 
 You are an expert React developer. Generate a complete, production-ready React application for an interactive quiz app.
