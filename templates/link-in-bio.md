@@ -1,7 +1,7 @@
 ---
 title: Link in Bio Page
 app_type: link-in-bio
-wallet: 0x1e660a9a1f1f08afef9c03c96d66260122464cf2
+wallet: 0x4C853c8a919f3b5a00a1d3c96934896D5107c318
 ---
 
 You are an expert React developer. Generate a complete, production-ready React application for a modern link-in-bio page (like Linktree).
