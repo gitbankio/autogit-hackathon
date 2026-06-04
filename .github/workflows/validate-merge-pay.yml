@@ -1,0 +1,346 @@
+name: Validate, Merge, and Pay
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'templates/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  validate-merge-pay:
+    runs-on: ubuntu-latest
+    steps:
+      # Always checkout BASE (main) — never the PR head.
+      # Scripts executed here come from trusted main branch only.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      # Generate a gitbankbot installation token using the App credentials.
+      # We normalize the PEM ourselves to handle any newline encoding issues.
+      - name: Generate gitbankbot token
+        id: app-token
+        uses: actions/github-script@v7
+        env:
+          APP_ID:          ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+        with:
+          result-encoding: string
+          script: |
+            const { createSign } = require('crypto');
+
+            function normalizePem(raw) {
+              if (!raw) throw new Error('APP_PRIVATE_KEY is empty');
+              let pem = raw.replace(/\\n/g, '\n').replace(/\r\n/g, '\n').trim();
+              if (pem.includes('\n')) return pem;
+              // stored with spaces — reconstruct
+              const m = pem.match(/-----BEGIN ([^-]+)-----\s*([\s\S]+?)\s*-----END \1-----/);
+              if (!m) throw new Error('Invalid PEM: no BEGIN/END markers');
+              const body = (m[2].replace(/\s+/g, '').match(/.{1,64}/g) ?? []).join('\n');
+              return `-----BEGIN ${m[1]}-----\n${body}\n-----END ${m[1]}-----\n`;
+            }
+
+            function makeJwt(appId, pem) {
+              const now = Math.floor(Date.now() / 1000);
+              const h = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+              const p = Buffer.from(JSON.stringify({ iat: now - 60, exp: now + 600, iss: String(appId) })).toString('base64url');
+              const data = `${h}.${p}`;
+              const sign = createSign('RSA-SHA256');
+              sign.update(data);
+              return `${data}.${sign.sign({ key: pem, format: 'pem', type: 'pkcs1' }, 'base64url')}`;
+            }
+
+            const pem = normalizePem(process.env.APP_PRIVATE_KEY);
+            const jwt = makeJwt(process.env.APP_ID, pem);
+
+            // Find installation for gitbankio org
+            const listRes = await fetch('https://api.github.com/app/installations?per_page=100', {
+              headers: { Authorization: `Bearer ${jwt}`, Accept: 'application/vnd.github+json' },
+            });
+            const installations = await listRes.json();
+            const inst = installations.find(i => i.account?.login === context.repo.owner);
+            if (!inst) throw new Error(`No installation found for ${context.repo.owner}`);
+
+            // Exchange for installation token
+            const tokenRes = await fetch(`https://api.github.com/app/installations/${inst.id}/access_tokens`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${jwt}`, Accept: 'application/vnd.github+json' },
+            });
+            const { token } = await tokenRes.json();
+            if (!token) throw new Error('Failed to get installation token');
+
+            core.setSecret(token);
+            return token;
+
+      - name: Validate, merge, update list, and pay
+        id: main
+        uses: actions/github-script@v7
+        env:
+          CONTEST_API_SECRET: ${{ secrets.CONTEST_API_SECRET }}
+          CONTEST_API_URL: ${{ secrets.CONTEST_API_URL }}
+          APP_TOKEN: ${{ steps.app-token.outputs.result }}
+        with:
+          github-token: ${{ steps.app-token.outputs.result }}
+          script: |
+            const fs   = require('fs');
+            const path = require('path');
+            const { execSync } = require('child_process');
+
+            // ── helpers ───────────────────────────────────────────────────
+            async function reject(reason) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `**Submission rejected.**\n\n${reason}\n\nRead [HACKATHON.md](../blob/main/HACKATHON.md) for submission guidelines.`,
+              });
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                state: 'closed',
+              });
+              core.setFailed(reason);
+            }
+
+            function parseFm(content) {
+              const m = content.match(/^---\n([\s\S]*?)\n---/);
+              if (!m) return null;
+              const fm = {};
+              for (const line of m[1].split('\n')) {
+                const ci = line.indexOf(':');
+                if (ci === -1) continue;
+                fm[line.slice(0, ci).trim()] = line.slice(ci + 1).trim().replace(/^["']|["']$/g, '');
+              }
+              return fm;
+            }
+
+            // ── Resolve bot git identity ──────────────────────────────────
+            let botName  = 'gitbankbot[bot]';
+            let botEmail = 'gitbankbot[bot]@users.noreply.github.com';
+            try {
+              const { data: botUser } = await github.rest.users.getByUsername({ username: 'gitbankbot[bot]' });
+              if (botUser?.id) botEmail = `${botUser.id}+gitbankbot[bot]@users.noreply.github.com`;
+              console.log(`Bot id: ${botUser?.id}, email: ${botEmail}`);
+            } catch (e) { console.log('Bot user lookup failed, using fallback email.'); }
+
+            // ── Configure git remote to use App token ─────────────────────
+            const appToken = process.env.APP_TOKEN;
+            execSync(`git remote set-url origin https://x-access-token:${appToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`);
+
+            // ── Step 1: get PR files via GitHub API (no checkout of PR head) ──
+            const { data: prFiles } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            const nonTemplate = prFiles.filter(f => !f.filename.startsWith('templates/') || !f.filename.endsWith('.md'));
+            if (nonTemplate.length > 0) {
+              const names = nonTemplate.map(f => f.filename).join(', ');
+              return await reject(`PR must only add files in \`templates/\`. Unexpected files: \`${names}\``);
+            }
+
+            const tplFiles = prFiles.filter(f => f.status === 'added');
+            if (tplFiles.length === 0) return await reject('No new `.md` file found in `templates/`. Your PR must add a new file, not modify an existing one.');
+            if (tplFiles.length  > 1) return await reject('Only one template file per PR. Submit each in a separate PR.');
+
+            // ── Step 2: fetch template content via blob API ───────────────
+            const { data: blob } = await github.rest.git.getBlob({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              file_sha: tplFiles[0].sha,
+            });
+            const content = Buffer.from(blob.content, 'base64').toString('utf-8');
+
+            // ── Step 3: parse + validate frontmatter ──────────────────────
+            const fm = parseFm(content);
+            if (!fm) return await reject('Missing frontmatter block (`---`). Required fields: `title`, `app_type`, `wallet`.');
+            if (!fm.title)    return await reject('Missing frontmatter field: `title`');
+            if (!fm.app_type) return await reject('Missing frontmatter field: `app_type`');
+            if (!fm.wallet)   return await reject('Missing frontmatter field: `wallet`');
+            if (!/^0x[0-9a-fA-F]{40}$/.test(fm.wallet))
+              return await reject('Invalid `wallet` address. Must be `0x` followed by 40 hex chars.');
+            if (fm.wallet === '0x0000000000000000000000000000000000000000')
+              return await reject('Replace the example wallet with your real Base wallet address.');
+
+            // ── Step 4: app_type uniqueness ───────────────────────────────
+            const templatesDir = path.join(process.env.GITHUB_WORKSPACE, 'templates');
+            let existingTypes = [];
+            try {
+              for (const ef of fs.readdirSync(templatesDir).filter(f => f.endsWith('.md'))) {
+                const efm = parseFm(fs.readFileSync(path.join(templatesDir, ef), 'utf8'));
+                if (efm?.app_type) existingTypes.push(efm.app_type);
+              }
+            } catch {}
+            if (existingTypes.includes(fm.app_type))
+              return await reject(`\`${fm.app_type}\` is already taken. Choose a different app type.`);
+
+            // ── Step 5: check participants list ───────────────────────────
+            const dataPath = path.join(process.env.GITHUB_WORKSPACE, 'data', 'participants.json');
+            let participants = [];
+            try { participants = JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch {}
+
+            if (participants.length >= 100) return await reject('The hackathon is full (100/100). Thank you!');
+
+            const pr       = context.payload.pull_request;
+            const existing = participants.find(p => Number(p.github_id) === Number(pr.user.id));
+            if (existing)
+              return await reject(`Your account already has entry #${existing.entry_number}. One entry per GitHub account.`);
+
+            // ── Step 5b: check GitHub account age (minimum 10 days) ───────
+            const { data: prAuthor } = await github.rest.users.getByUsername({ username: pr.user.login });
+            const accountCreatedAt = new Date(prAuthor.created_at);
+            const accountAgeDays = (Date.now() - accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24);
+            const MIN_ACCOUNT_AGE_DAYS = 10;
+            if (accountAgeDays < MIN_ACCOUNT_AGE_DAYS) {
+              const ageStr = accountAgeDays < 1
+                ? 'less than 1 day'
+                : `${Math.floor(accountAgeDays)} day${Math.floor(accountAgeDays) === 1 ? '' : 's'}`;
+              return await reject(
+                `Your GitHub account is too new (${ageStr} old). Accounts must be at least ${MIN_ACCOUNT_AGE_DAYS} days old to participate. This rule is in place to keep the hackathon fair for the community.`
+              );
+            }
+
+            // ── Step 6: merge PR ──────────────────────────────────────────
+            console.log('Validation passed. Merging PR...');
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: 'squash',
+              commit_title: `add template: ${fm.title} (${fm.app_type})`,
+            });
+            console.log('PR merged.');
+
+            // ── Step 7: add pending entry ─────────────────────────────────
+            execSync('git fetch origin main');
+            execSync('git reset --hard origin/main');
+
+            try { participants = JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch { participants = []; }
+
+            const entryNumber = participants.length + 1;
+            participants.push({
+              entry_number:   entryNumber,
+              github_id:      pr.user.id,
+              github_login:   pr.user.login,
+              github_avatar:  pr.user.avatar_url,
+              template_title: fm.title,
+              app_type:       fm.app_type,
+              pr_number:      pr.number,
+              pr_url:         pr.html_url,
+              tx_hash:        null,
+              vault_address:  null,
+              paid_at:        null,
+            });
+            fs.writeFileSync(dataPath, JSON.stringify(participants, null, 2));
+
+            execSync(`node ${path.join(process.env.GITHUB_WORKSPACE, 'scripts/generate-list.js')}`);
+
+            execSync(`git config user.name "${botName}"`);
+            execSync(`git config user.email "${botEmail}"`);
+            execSync('git add data/participants.json docs/index.html');
+            execSync(`git commit -m "add entry #${entryNumber} (pending) - @${pr.user.login}"`);
+            execSync('git push origin main');
+            console.log(`Pushed pending entry #${entryNumber}.`);
+
+            core.setOutput('entry_number', String(entryNumber));
+            core.setOutput('entry_added', 'true');
+
+            // ── Step 8: call payment API ──────────────────────────────────
+            const apiUrl = process.env.CONTEST_API_URL || 'https://gitbank.io/api/contest/pay';
+            let txHash = '', vaultAddress = '', payError = '';
+            try {
+              const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Contest-Secret': process.env.CONTEST_API_SECRET },
+                body: JSON.stringify({
+                  github_id:      pr.user.id,
+                  github_login:   pr.user.login,
+                  wallet:         fm.wallet,
+                  template_title: fm.title,
+                  app_type:       fm.app_type,
+                  pr_number:      pr.number,
+                  pr_url:         pr.html_url,
+                }),
+              });
+              const text = await res.text();
+              if (!res.ok) {
+                payError = `${res.status}: ${text.slice(0, 200)}`;
+              } else {
+                const payData = JSON.parse(text);
+                txHash       = payData.txHash       || '';
+                vaultAddress = payData.vaultAddress || '';
+              }
+            } catch (err) { payError = err.message; }
+
+            // ── Step 9: update entry with txHash if paid ──────────────────
+            if (txHash) {
+              try {
+                execSync('git fetch origin main');
+                execSync('git reset --hard origin/main');
+                const latest = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+                const idx = latest.findIndex(p => Number(p.entry_number) === entryNumber);
+                if (idx !== -1) {
+                  latest[idx].tx_hash = txHash; latest[idx].vault_address = vaultAddress;
+                  latest[idx].paid_at = new Date().toISOString();
+                  fs.writeFileSync(dataPath, JSON.stringify(latest, null, 2));
+                  execSync(`node ${path.join(process.env.GITHUB_WORKSPACE, 'scripts/generate-list.js')}`);
+                  execSync('git add data/participants.json docs/index.html');
+                  execSync(`git commit -m "mark entry #${entryNumber} paid - @${pr.user.login}"`);
+                  execSync('git push origin main');
+                }
+              } catch (err) { console.warn('Could not update txHash:', err.message); }
+            }
+
+            core.setOutput('tx_hash', txHash);
+            core.setOutput('vault_address', vaultAddress);
+            core.setOutput('pay_error', payError);
+
+      - name: Comment success on PR
+        if: steps.main.outputs.tx_hash != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.result }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                `**Entry #${{ steps.main.outputs.entry_number }} accepted. Reward sent.**`,
+                ``,
+                `5 gitUSDC has been deposited into your Gitbank vault on Base.`,
+                ``,
+                `Vault: \`${{ steps.main.outputs.vault_address }}\``,
+                `Transaction: https://basescan.org/tx/${{ steps.main.outputs.tx_hash }}`,
+                ``,
+                `You are now on the [participant list](https://gitbankio.github.io/autogit-hackathon/).`,
+              ].join('\n'),
+            });
+
+      - name: Comment pending on PR
+        if: steps.main.outputs.entry_added == 'true' && steps.main.outputs.tx_hash == ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.result }}
+          script: |
+            const errLine = `${{ steps.main.outputs.pay_error }}` ? `\n\nPayment note: \`${{ steps.main.outputs.pay_error }}`.slice(0, 120) + '`' : '';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                `**Entry #${{ steps.main.outputs.entry_number }} accepted.**`,
+                ``,
+                `Your template is now on the [participant list](https://gitbankio.github.io/autogit-hackathon/).`,
+                `The 5 gitUSDC reward will be sent to your vault shortly.${errLine}`,
+              ].join('\n'),
+            });
