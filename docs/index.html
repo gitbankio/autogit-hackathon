@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoGit Hackathon</title>
+  <meta name="description" content="Submit a prompt template for AutoGit. Get paid automatically in gitUSDC when your PR merges." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='180' height='180' rx='36' fill='%232222FF'/%3E%3Cpath d='M54 72 L66 54 L78 72Z' fill='white'/%3E%3Cpath d='M102 72 L114 54 L126 72Z' fill='white'/%3E%3Cellipse cx='90' cy='98' rx='40' ry='36' fill='white'/%3E%3Cpath d='M82 72 Q90 80 98 72' fill='%232222FF'/%3E%3Ccircle cx='76' cy='100' r='8' fill='%232222FF'/%3E%3Ccircle cx='104' cy='100' r='8' fill='%232222FF'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f0ede8;
+      --bg2: #e8e4dd;
+      --bg3: #dedad3;
+      --surface: #faf8f5;
+      --surface2: #f0ede8;
+      --border: #c8c0b4;
+      --border2: #b8b0a4;
+      --text: #1a1614;
+      --text2: #5a524a;
+      --text3: #8a827a;
+      --accent: #2222ff;
+      --accent2: #0000cc;
+      --accent-bg: #e8e8ff;
+      --gold: #c07800;
+      --gold-bg: #fff3cc;
+      --green: #007840;
+      --green-bg: #d4f0e0;
+      --red: #cc2200;
+      --pixel-shadow: 3px 3px 0 var(--border);
+      --pixel-shadow-accent: 3px 3px 0 var(--accent2);
+    }
+    [data-theme="dark"] {
+      --bg: #0e0c0a;
+      --bg2: #161412;
+      --bg3: #201e1a;
+      --surface: #1a1816;
+      --surface2: #201e1a;
+      --border: #38342e;
+      --border2: #4a4640;
+      --text: #f0ece6;
+      --text2: #b0a898;
+      --text3: #706860;
+      --accent: #5555ff;
+      --accent2: #8888ff;
+      --accent-bg: #1a1a3a;
+      --gold: #f0aa00;
+      --gold-bg: #2a2200;
+      --green: #00cc66;
+      --green-bg: #002a16;
+      --red: #ff5533;
+      --pixel-shadow: 3px 3px 0 #000;
+      --pixel-shadow-accent: 3px 3px 0 #0000aa;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ── Topbar ─────────────────────────────────────────── */
+    .topbar {
+      background: var(--accent);
+      color: #fff;
+      padding: 0 24px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--accent2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: #fff;
+      letter-spacing: 0.03em;
+    }
+    .topbar-brand svg { flex-shrink: 0; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .btn-theme {
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.4);
+      color: #fff;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      transition: background 0.1s;
+      image-rendering: pixelated;
+    }
+    .btn-theme:hover { background: rgba(255,255,255,0.25); }
+    .topbar-link {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 4px 8px;
+      border: 2px solid transparent;
+    }
+    .topbar-link:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 48px);
+    }
+
+    /* ── Left panel ─────────────────────────────────────── */
+    .left {
+      background: var(--surface);
+      border-right: 3px solid var(--border);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .hero-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      color: var(--accent);
+      line-height: 1.6;
+      text-shadow: 3px 3px 0 var(--accent-bg);
+    }
+    .hero-sub {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-top: 8px;
+    }
+    .hero-sub a { color: var(--accent); text-decoration: none; }
+    .hero-sub a:hover { text-decoration: underline; }
+
+    /* pixel cat decoration */
+    .pixel-cat {
+      width: 64px;
+      height: 64px;
+      image-rendering: pixelated;
+    }
+
+    /* slot counter */
+    .slot-box {
+      background: var(--bg2);
+      border: 3px solid var(--border);
+      padding: 16px;
+      box-shadow: var(--pixel-shadow);
+    }
+    .slot-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+    }
+    .slot-count {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 20px;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .slot-count span { font-size: 12px; color: var(--text3); }
+    .px-bar {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+    .px-block {
+      width: 12px;
+      height: 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      image-rendering: pixelated;
+    }
+    .px-block.filled {
+      background: var(--accent);
+      border-color: var(--accent2);
+    }
+
+    /* reward cards */
+    .rewards-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .rewards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .r-card {
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .r-card.auto { border-color: var(--accent); background: var(--accent-bg); }
+    .r-card.gold1 { border-color: var(--gold); background: var(--gold-bg); }
+    .r-card.gold2 { border-color: var(--gold); background: var(--gold-bg); opacity: 0.85; }
+    .r-card.gold3 { border-color: var(--gold); background: var(--gold-bg); opacity: 0.7; }
+    .r-amount {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .r-card.auto .r-amount { color: var(--accent); }
+    .r-card.gold1 .r-amount, .r-card.gold2 .r-amount, .r-card.gold3 .r-amount { color: var(--gold); }
+    .r-desc {
+      font-size: 10px;
+      color: var(--text2);
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    /* action buttons */
+    .actions { display: flex; flex-direction: column; gap: 8px; }
+    .btn-primary {
+      display: block;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      padding: 11px 16px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      text-align: center;
+      border: 3px solid var(--accent2);
+      box-shadow: var(--pixel-shadow-accent);
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+    .btn-primary:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--accent2); }
+    .btn-secondary {
+      display: block;
+      background: var(--surface2);
+      color: var(--text);
+      text-decoration: none;
+      padding: 9px 16px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      text-align: center;
+      border: 2px solid var(--border);
+      box-shadow: var(--pixel-shadow);
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+    .btn-secondary:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--border2); }
+
+    .footer-links {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 2px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-links a {
+      font-size: 10px;
+      color: var(--text3);
+      text-decoration: none;
+    }
+    .footer-links a:hover { color: var(--accent); text-decoration: underline; }
+
+    /* ── Right panel ────────────────────────────────────── */
+    .right {
+      padding: 32px 28px;
+      overflow-x: auto;
+    }
+
+    .panel-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-title .count-badge {
+      background: var(--accent);
+      color: #fff;
+      padding: 3px 8px;
+      font-size: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead {
+      background: var(--bg2);
+      border-bottom: 3px solid var(--border);
+    }
+    th {
+      padding: 10px 12px;
+      text-align: left;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:hover td { background: var(--surface); }
+    .col-num {
+      color: var(--text3);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      width: 52px;
+    }
+    .col-user {
+      white-space: nowrap;
+      min-width: 140px;
+    }
+    .col-user { display: flex; align-items: center; gap: 8px; }
+    .col-user a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .col-user a:hover { text-decoration: underline; }
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      image-rendering: auto;
+    }
+    .col-template { color: var(--text); max-width: 200px; }
+    .col-type { white-space: nowrap; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--accent-bg);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      font-size: 10px;
+    }
+    .col-reward { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .paid { color: var(--green); }
+    .status-pending { color: var(--text3); }
+    .tx-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 10px;
+      border-bottom: 1px dashed var(--accent);
+    }
+    .tx-link:hover { border-bottom-style: solid; }
+    .tx-pending { color: var(--text3); font-size: 10px; }
+    .col-date { color: var(--text3); font-size: 11px; white-space: nowrap; }
+
+    .empty-row td, td.empty-row {
+      text-align: center;
+      color: var(--text3);
+      padding: 60px 20px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      line-height: 2;
+    }
+
+    /* pixel grid bg decoration on right panel */
+    .right {
+      background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-color: var(--bg);
+    }
+    .right-inner {
+      background: var(--bg);
+      padding: 24px;
+      border: 3px solid var(--border);
+      box-shadow: var(--pixel-shadow);
+    }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .left { border-right: none; border-bottom: 3px solid var(--border); }
+      .col-date, .col-template { display: none; }
+      .hero-title { font-size: 14px; }
+    }
+    @media (max-width: 480px) {
+      .topbar-link { display: none; }
+      .hero-title { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <svg width="26" height="26" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="180" height="180" rx="36" fill="rgba(255,255,255,0.2)"/>
+        <path d="M54 72 L66 54 L78 72Z" fill="white"/>
+        <path d="M102 72 L114 54 L126 72Z" fill="white"/>
+        <ellipse cx="90" cy="98" rx="40" ry="36" fill="white"/>
+        <path d="M82 72 Q90 80 98 72" fill="#2222FF"/>
+        <circle cx="76" cy="100" r="8" fill="#2222FF"/>
+        <circle cx="104" cy="100" r="8" fill="#2222FF"/>
+      </svg>
+      GITBANK x AUTOGIT
+    </div>
+    <div class="topbar-right">
+      <a href="https://github.com/gitbankio/autogit-hackathon/blob/main/HACKATHON.md" target="_blank" rel="noopener" class="topbar-link">Rules</a>
+      <a href="https://gitbank.io/autogit/" target="_blank" rel="noopener" class="topbar-link">Try AutoGit</a>
+      <button class="btn-theme" id="themeBtn" onclick="toggleTheme()">DARK</button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- Left panel -->
+    <aside class="left">
+
+      <div>
+        <div class="hero-title">AUTO&shy;GIT<br>HACKA&shy;THON</div>
+        <p class="hero-sub">
+          Submit a prompt template for
+          <a href="https://gitbank.io/autogit/" target="_blank" rel="noopener">AutoGit</a>.
+          Get paid automatically in gitUSDC when your PR merges.
+        </p>
+      </div>
+
+      <div class="slot-box">
+        <div class="slot-label">Slots filled</div>
+        <div class="slot-count">100 <span>/ 100</span></div>
+        <div class="px-bar"><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span><span class="px-block filled"></span></div>
+      </div>
+
+      <div>
+        <div class="rewards-title">Rewards</div>
+        <div class="rewards-grid">
+          <div class="r-card auto">
+            <div class="r-amount">5 gitUSDC</div>
+            <div class="r-desc">Every entry<br>Auto-paid on merge</div>
+          </div>
+          <div class="r-card gold1">
+            <div class="r-amount">300 gitUSDC</div>
+            <div class="r-desc">Best template<br>Team pick</div>
+          </div>
+          <div class="r-card gold2">
+            <div class="r-amount">200 gitUSDC</div>
+            <div class="r-desc">2nd best<br>Team pick</div>
+          </div>
+          <div class="r-card gold3">
+            <div class="r-amount">100 gitUSDC</div>
+            <div class="r-desc">3rd best<br>Team pick</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="https://github.com/gitbankio/autogit-hackathon/fork" target="_blank" rel="noopener" class="btn-primary">+ SUBMIT TEMPLATE</a>
+        <a href="https://github.com/gitbankio/autogit-hackathon/blob/main/HACKATHON.md" target="_blank" rel="noopener" class="btn-secondary">READ RULES</a>
+        <a href="https://gitbank.io/autogit/" target="_blank" rel="noopener" class="btn-secondary">TRY AUTOGIT</a>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/gitbankio/autogit-hackathon" target="_blank" rel="noopener">GitHub Repo</a>
+        <a href="https://github.com/gitbankio" target="_blank" rel="noopener">gitbankio</a>
+        <a href="https://gitbank.io" target="_blank" rel="noopener">gitbank.io</a>
+      </div>
+
+    </aside>
+
+    <!-- Right panel -->
+    <main class="right">
+      <div class="right-inner">
+        <div class="panel-title">
+          Participants
+          <span class="count-badge">100 / 100</span>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Author</th>
+              <th>Template</th>
+              <th>App Type</th>
+              <th>Reward</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+    <tr>
+      <td class="col-num">#1</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/285863560?v=4" alt="" class="avatar" />
+        <a href="https://github.com/imrenone" target="_blank" rel="noopener">@imrenone</a>
+      </td>
+      <td class="col-template">DeFi Dashboard</td>
+      <td class="col-type"><span class="badge">defi-dashboard</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xca41b14a74f35601b795cc5d57f0c6dd04bbb98adabda41caafd7a829c273b42" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#2</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/171657439?v=4" alt="" class="avatar" />
+        <a href="https://github.com/Qiu-Difeng" target="_blank" rel="noopener">@Qiu-Difeng</a>
+      </td>
+      <td class="col-template">Expense Tracker</td>
+      <td class="col-type"><span class="badge">expense-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x0a42133bf179a435fe017f983391a9671cb97b32591e3e82f4ffbc05fe287039" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#3</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/286581058?v=4" alt="" class="avatar" />
+        <a href="https://github.com/EthanGitbanker" target="_blank" rel="noopener">@EthanGitbanker</a>
+      </td>
+      <td class="col-template">Modern Todo List App</td>
+      <td class="col-type"><span class="badge">todo-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x4d7fdd579a87aad1f366a88cdba98bc3d55c81fec9b29f8a72930ec5c398b6bf" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#4</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/287358100?v=4" alt="" class="avatar" />
+        <a href="https://github.com/orbithousezkp" target="_blank" rel="noopener">@orbithousezkp</a>
+      </td>
+      <td class="col-template">Signed Cycle Explorer</td>
+      <td class="col-type"><span class="badge">signed-cycle-explorer</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x992d29c149b0aec672d0694d81aab00e73fd67672f6a0b8a353699a246ac79f8" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#5</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288861336?v=4" alt="" class="avatar" />
+        <a href="https://github.com/GitbankTest" target="_blank" rel="noopener">@GitbankTest</a>
+      </td>
+      <td class="col-template">PrivSend — Simple Private Token Transfer</td>
+      <td class="col-type"><span class="badge">privsend</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xbbef3ad646ac648fe611e2aee4943d982d96b9dd27bf07ce404cb63a8f8f5dd8" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#6</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/195719230?v=4" alt="" class="avatar" />
+        <a href="https://github.com/oneratlife" target="_blank" rel="noopener">@oneratlife</a>
+      </td>
+      <td class="col-template">Invoice Maker for Freelancers</td>
+      <td class="col-type"><span class="badge">invoice-maker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x757f300cc19b4a818525ca8b04d2471ed4b95a742f9a4770aa6f23cfe23bd00b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#7</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/in/3756628?v=4" alt="" class="avatar" />
+        <a href="https://github.com/gitbankbot[bot]" target="_blank" rel="noopener">@gitbankbot[bot]</a>
+      </td>
+      <td class="col-template">Bot Identity Test V2</td>
+      <td class="col-type"><span class="badge">bot-identity-test-v2-1780041536994</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xaa8934e58113f81c39e428d7764ed9a5d8226f8c3905d57332eff8c1c4498991" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#8</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/195719516?v=4" alt="" class="avatar" />
+        <a href="https://github.com/nithyajean" target="_blank" rel="noopener">@nithyajean</a>
+      </td>
+      <td class="col-template">Habit Streaks, Kitchen Edition</td>
+      <td class="col-type"><span class="badge">habit-streaks</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xd47f892bcea1d8a290f5cdb1d87784fd9142f602918977be02243982be85d1d7" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#9</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/272483408?v=4" alt="" class="avatar" />
+        <a href="https://github.com/asuranwhale" target="_blank" rel="noopener">@asuranwhale</a>
+      </td>
+      <td class="col-template">Tip Jar Page</td>
+      <td class="col-type"><span class="badge">tip-jar</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xf13164fd97d76009338a5165c48e39d451a80549bcbdeb8cfe0b31ce4098410d" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#10</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/199456294?v=4" alt="" class="avatar" />
+        <a href="https://github.com/mysticf0r" target="_blank" rel="noopener">@mysticf0r</a>
+      </td>
+      <td class="col-template">Garden Planner, Spring Bed Edition</td>
+      <td class="col-type"><span class="badge">garden-planner</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x6ae88ff53690c79df7fb9fc64f8ae6627b6cf2b50e0ad484d4e628643e081795" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#11</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/195715118?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kaytherne" target="_blank" rel="noopener">@kaytherne</a>
+      </td>
+      <td class="col-template">Chord Explorer</td>
+      <td class="col-type"><span class="badge">chord-explorer</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xb487dfc8854583f27e6bc84ecc8b6b9170767079c17a3b0407caa0529dbb44ed" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#12</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288896821?v=4" alt="" class="avatar" />
+        <a href="https://github.com/ilovesusie79" target="_blank" rel="noopener">@ilovesusie79</a>
+      </td>
+      <td class="col-template">Dream Log</td>
+      <td class="col-type"><span class="badge">dream-log</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x1e1f4b1b2fd9b2cec698fd5c87f94d37dae664aab5f6ff00f9b07c0e88b0b4da" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#13</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288898145?v=4" alt="" class="avatar" />
+        <a href="https://github.com/fabuvino" target="_blank" rel="noopener">@fabuvino</a>
+      </td>
+      <td class="col-template">Tarot Pull</td>
+      <td class="col-type"><span class="badge">tarot-pull</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x5cd95fb15432bc3b8623379b14cebd76bcc0b1cfdec9998b9b2675aa826e6bd0" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#14</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288901059?v=4" alt="" class="avatar" />
+        <a href="https://github.com/milksphere" target="_blank" rel="noopener">@milksphere</a>
+      </td>
+      <td class="col-template">Gradient Studio</td>
+      <td class="col-type"><span class="badge">gradient-studio</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xadbcda58e92aaf23bdc6fb7d039d4a2039f74aaa90442b17e504593a18ea17c3" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#15</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288902687?v=4" alt="" class="avatar" />
+        <a href="https://github.com/ytchiefminister" target="_blank" rel="noopener">@ytchiefminister</a>
+      </td>
+      <td class="col-template">Fermentation Tracker</td>
+      <td class="col-type"><span class="badge">fermentation-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x0e9ff1ad1f34f75daccc42df137d52f950b5268b4c259fe8f30c8cfbe832b0e7" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#16</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288904983?v=4" alt="" class="avatar" />
+        <a href="https://github.com/devika230500" target="_blank" rel="noopener">@devika230500</a>
+      </td>
+      <td class="col-template">Regex Playground</td>
+      <td class="col-type"><span class="badge">regex-playground</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xd3e53ee5b6ae80c98fee473d6af33cfcd6ac9bf70a335e215c23f54115fc5933" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#17</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288906167?v=4" alt="" class="avatar" />
+        <a href="https://github.com/meowsef" target="_blank" rel="noopener">@meowsef</a>
+      </td>
+      <td class="col-template">Dice Tower</td>
+      <td class="col-type"><span class="badge">dice-tower</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xd3513adae6f9707de533e0db7ac5594671e509703e1d778b13d897e13121aa68" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#18</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288909390?v=4" alt="" class="avatar" />
+        <a href="https://github.com/bornchaotic" target="_blank" rel="noopener">@bornchaotic</a>
+      </td>
+      <td class="col-template">Moon Phase</td>
+      <td class="col-type"><span class="badge">moon-phase</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x36ab4f687027e5df81983bb56dede52cba906fd1d63e5a7b20002a86df0a6dca" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#19</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288910304?v=4" alt="" class="avatar" />
+        <a href="https://github.com/samsaltman" target="_blank" rel="noopener">@samsaltman</a>
+      </td>
+      <td class="col-template">WPM Arena</td>
+      <td class="col-type"><span class="badge">wpm-arena</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xc4ca00a13ae1d070a519bfeee898140d518d7aa69f29ba3f9cf533e15bb37976" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#20</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288911335?v=4" alt="" class="avatar" />
+        <a href="https://github.com/jdthejin" target="_blank" rel="noopener">@jdthejin</a>
+      </td>
+      <td class="col-template">ISS Tracker</td>
+      <td class="col-type"><span class="badge">iss-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x2c4dff8ff5d77bb09d40fb87b9f24a466b53e9bcaadd6ef10c90e6a5fc003908" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#21</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288911767?v=4" alt="" class="avatar" />
+        <a href="https://github.com/gogoka186" target="_blank" rel="noopener">@gogoka186</a>
+      </td>
+      <td class="col-template">Mandelbrot Zoom</td>
+      <td class="col-type"><span class="badge">mandelbrot-zoom</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xa6d6ab0e17b1517431e4ac087e0682d1bd3fff2da46506699d462d0b9382ee95" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#22</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288912322?v=4" alt="" class="avatar" />
+        <a href="https://github.com/yozeetatsu" target="_blank" rel="noopener">@yozeetatsu</a>
+      </td>
+      <td class="col-template">Bookmark Vault</td>
+      <td class="col-type"><span class="badge">bookmark-vault</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x51cad2caf9cfe26c32982e4bb339a98c4f9131c74ee4ddf9d010b92639284c5b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#23</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288913851?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kaanbusu" target="_blank" rel="noopener">@kaanbusu</a>
+      </td>
+      <td class="col-template">MIDI Monitor</td>
+      <td class="col-type"><span class="badge">midi-monitor</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x60cb541a97e115d63baafd2d44eb3e678dc427965797323f0a7cfa6d86eec3fa" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#24</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288916756?v=4" alt="" class="avatar" />
+        <a href="https://github.com/gunana304" target="_blank" rel="noopener">@gunana304</a>
+      </td>
+      <td class="col-template">Flow Field</td>
+      <td class="col-type"><span class="badge">flow-field</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xc1f1c82bcafeedc2cc033bd876b1b506299ca526b3270eb559992120fcf2be32" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#25</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288921029?v=4" alt="" class="avatar" />
+        <a href="https://github.com/pocomastert" target="_blank" rel="noopener">@pocomastert</a>
+      </td>
+      <td class="col-template">Voice Notes</td>
+      <td class="col-type"><span class="badge">voice-notes</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xe802249fe7bba8de3f285627a61ef3c3e4d3fe279bf27c9c183d3f3d5ac99a07" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#26</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288922377?v=4" alt="" class="avatar" />
+        <a href="https://github.com/mitchelinn" target="_blank" rel="noopener">@mitchelinn</a>
+      </td>
+      <td class="col-template">Offline Zine</td>
+      <td class="col-type"><span class="badge">offline-zine</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xc550537f80bb61c701ca5373ce203e5492569a334010c7ff6e8712f7ee9fa770" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#27</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288923855?v=4" alt="" class="avatar" />
+        <a href="https://github.com/rigtujk" target="_blank" rel="noopener">@rigtujk</a>
+      </td>
+      <td class="col-template">Ink Sketch</td>
+      <td class="col-type"><span class="badge">ink-sketch</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xd3a45604fb9ab0d37dc8a750ac2da37d400f31e69672e978621753acf6ab118d" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#28</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288924766?v=4" alt="" class="avatar" />
+        <a href="https://github.com/koneng6984" target="_blank" rel="noopener">@koneng6984</a>
+      </td>
+      <td class="col-template">Prime Sieve</td>
+      <td class="col-type"><span class="badge">prime-sieve</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xb8e28c9d89a6cf7afbbdb634b842a04d81ffa2ceb092f134ede47256d3c3ca4a" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#29</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288925718?v=4" alt="" class="avatar" />
+        <a href="https://github.com/waktuheureuy60" target="_blank" rel="noopener">@waktuheureuy60</a>
+      </td>
+      <td class="col-template">Compass Walk</td>
+      <td class="col-type"><span class="badge">compass-walk</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x6bb8fa98e72c96af5c7f95e059a2f25436680191d261b86fc688b1ee6ad7d899" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#30</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288928727?v=4" alt="" class="avatar" />
+        <a href="https://github.com/dubinmin" target="_blank" rel="noopener">@dubinmin</a>
+      </td>
+      <td class="col-template">Passphrase Vault</td>
+      <td class="col-type"><span class="badge">passphrase-vault</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x5ec5ec54d0473781b896f11ce2aa4cc1cdf55fc908882442a19f99f80a9299de" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#31</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288927335?v=4" alt="" class="avatar" />
+        <a href="https://github.com/liscoin726" target="_blank" rel="noopener">@liscoin726</a>
+      </td>
+      <td class="col-template">Color Thief Cam</td>
+      <td class="col-type"><span class="badge">color-thief-cam</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xbffbb25b18f2f996e09d4a0ee2b8955fee722616d4a67a17ddfc9a8116425386" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#32</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288930355?v=4" alt="" class="avatar" />
+        <a href="https://github.com/wakitakii" target="_blank" rel="noopener">@wakitakii</a>
+      </td>
+      <td class="col-template">Font Tester</td>
+      <td class="col-type"><span class="badge">font-tester</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x714bc078648000cb0892b3692801c5763b8e2e53d2de985715b81dcf7264674c" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#33</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288931636?v=4" alt="" class="avatar" />
+        <a href="https://github.com/windowsupi" target="_blank" rel="noopener">@windowsupi</a>
+      </td>
+      <td class="col-template">Card Loom</td>
+      <td class="col-type"><span class="badge">card-loom</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x4b3940ac3f0bc1ff5bc2d82e501f753d5dbbd0275d2156c76018b88d01156fb9" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#34</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288933435?v=4" alt="" class="avatar" />
+        <a href="https://github.com/leenamathewy" target="_blank" rel="noopener">@leenamathewy</a>
+      </td>
+      <td class="col-template">Recipe Card</td>
+      <td class="col-type"><span class="badge">recipe-card</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x290ae9b0139a4eaf27a57897d11a78c7dd390f1e45b65b30ade166ed459c726c" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#35</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288934522?v=4" alt="" class="avatar" />
+        <a href="https://github.com/catandtit" target="_blank" rel="noopener">@catandtit</a>
+      </td>
+      <td class="col-template">Pomodoro Arena</td>
+      <td class="col-type"><span class="badge">pomodoro-arena</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x646527de3b8b15430b9e9b852f3c980b29f58fedc63f22dfc83cbc5bd295111b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#36</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288938295?v=4" alt="" class="avatar" />
+        <a href="https://github.com/ponniyinn6765" target="_blank" rel="noopener">@ponniyinn6765</a>
+      </td>
+      <td class="col-template">Weather Glance</td>
+      <td class="col-type"><span class="badge">weather-glance</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x7abd05583a935c37e7d50ee47fb2abe45e44cb1bba9c4b228a39a33aeabbaff5" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#37</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/122326246?v=4" alt="" class="avatar" />
+        <a href="https://github.com/eutv2022" target="_blank" rel="noopener">@eutv2022</a>
+      </td>
+      <td class="col-template">Bug Triage Command Center</td>
+      <td class="col-type"><span class="badge">bug-triage-command-center</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xba7551456b281709da66980f9f380df36032190b1f5b2e13dca6552a65887c30" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#38</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288939510?v=4" alt="" class="avatar" />
+        <a href="https://github.com/victoariya" target="_blank" rel="noopener">@victoariya</a>
+      </td>
+      <td class="col-template">Markdown Livewire</td>
+      <td class="col-type"><span class="badge">markdown-livewire</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x3249661b77cac44438b9a0d451a792940ed10a54f8f0d3a69524499c0922967f" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#39</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288943921?v=4" alt="" class="avatar" />
+        <a href="https://github.com/zampagorilla" target="_blank" rel="noopener">@zampagorilla</a>
+      </td>
+      <td class="col-template">Boids Flock</td>
+      <td class="col-type"><span class="badge">boids-flock</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xca5427f3a06e3ae11f8c78885e092efbfbe9e2490bde21092650f3522840b4ee" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#40</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288947779?v=4" alt="" class="avatar" />
+        <a href="https://github.com/twitterini152" target="_blank" rel="noopener">@twitterini152</a>
+      </td>
+      <td class="col-template">Serial Terminal</td>
+      <td class="col-type"><span class="badge">serial-terminal</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xdf846945f555d06f985b6a41487d12f06a025713c41a65e4539f84fe9f5b6527" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#41</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288949257?v=4" alt="" class="avatar" />
+        <a href="https://github.com/bioblioson" target="_blank" rel="noopener">@bioblioson</a>
+      </td>
+      <td class="col-template">Shopping List</td>
+      <td class="col-type"><span class="badge">shopping-list</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x6f87d517bbd31d4c6e77a7ad9a1d2271db49f77789ec1c5cd18b6167e56ef164" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#42</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288954214?v=4" alt="" class="avatar" />
+        <a href="https://github.com/boersanne" target="_blank" rel="noopener">@boersanne</a>
+      </td>
+      <td class="col-template">Birthday Reminder</td>
+      <td class="col-type"><span class="badge">birthday-reminder</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x51de4096281ea8003a82e1a67e525bd4ad084ab97e02f5c9fb55f8efc601e599" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#43</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288946645?v=4" alt="" class="avatar" />
+        <a href="https://github.com/qyburnai" target="_blank" rel="noopener">@qyburnai</a>
+      </td>
+      <td class="col-template">Tip Calculator</td>
+      <td class="col-type"><span class="badge">tip-calculator</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xcd3bcd6a0f586ece2f35c354652edc9fe2442a6989eb3ef0a46aaf0bca1e8d82" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#44</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/122463948?v=4" alt="" class="avatar" />
+        <a href="https://github.com/caSSano22" target="_blank" rel="noopener">@caSSano22</a>
+      </td>
+      <td class="col-template">Quiz App</td>
+      <td class="col-type"><span class="badge">quiz-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x5d2047c5e0671d0ab311ca47d1d8512afc527ffd8a49a9bb156c37e109d60994" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#45</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288940083?v=4" alt="" class="avatar" />
+        <a href="https://github.com/chimpanzcr" target="_blank" rel="noopener">@chimpanzcr</a>
+      </td>
+      <td class="col-template">Gas Tracker</td>
+      <td class="col-type"><span class="badge">gas-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x8779d44eb9d70bdd4e8aeecbc2651e72e4e4827bf8829e5b79cce40e04e92b26" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#46</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288967106?v=4" alt="" class="avatar" />
+        <a href="https://github.com/buatanj44-gif" target="_blank" rel="noopener">@buatanj44-gif</a>
+      </td>
+      <td class="col-template">KPR/KKB Loan Calculator</td>
+      <td class="col-type"><span class="badge">loan-calculator</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xae5c0afe4197cfde7314fff078437b7f25a4c8780519067df1beb0fdc46242e2" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#47</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288941938?v=4" alt="" class="avatar" />
+        <a href="https://github.com/playfartchamp" target="_blank" rel="noopener">@playfartchamp</a>
+      </td>
+      <td class="col-template">ENS Resolver</td>
+      <td class="col-type"><span class="badge">ens-resolver</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x9cc4ef08a99af409f228bebac9e5a92ff98d92d550ef23646c11258789b99870" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#48</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/260135020?v=4" alt="" class="avatar" />
+        <a href="https://github.com/pucekadoh-source" target="_blank" rel="noopener">@pucekadoh-source</a>
+      </td>
+      <td class="col-template">Habit Tracker Dashboard</td>
+      <td class="col-type"><span class="badge">habit-tracker-dashboard</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x3a401828a599a43c7913387ef6c8d895145d68bfa6ee0d4189df09869b2fd902" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#49</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288942569?v=4" alt="" class="avatar" />
+        <a href="https://github.com/yewscript" target="_blank" rel="noopener">@yewscript</a>
+      </td>
+      <td class="col-template">QR Generator</td>
+      <td class="col-type"><span class="badge">qr-generator</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x48e5020e2ceff1a7005aaf42930275afcecf8e06f348b75fadae443f3cdfdc0a" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#50</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288973374?v=4" alt="" class="avatar" />
+        <a href="https://github.com/wpeggg1-web" target="_blank" rel="noopener">@wpeggg1-web</a>
+      </td>
+      <td class="col-template">Countdown Timer App</td>
+      <td class="col-type"><span class="badge">countdown-timer-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xe3f0b76b23a7052c9acf6b54235848200d8ea02ea6639b211bdf8553e6a5e361" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#51</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/276690690?v=4" alt="" class="avatar" />
+        <a href="https://github.com/Homie4570" target="_blank" rel="noopener">@Homie4570</a>
+      </td>
+      <td class="col-template">AI Agent Fleet Monitor</td>
+      <td class="col-type"><span class="badge">ai-agent-fleet-monitor</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xac6511e5cf2dc024b57ab1d5000518d346250bd295de666e4d021a1f711d4d9b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#52</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288974847?v=4" alt="" class="avatar" />
+        <a href="https://github.com/vssvvwg-hash" target="_blank" rel="noopener">@vssvvwg-hash</a>
+      </td>
+      <td class="col-template">Invoice Generator</td>
+      <td class="col-type"><span class="badge">invoice-generator</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xcefa2e52de15f3cb2255567672d96dd986f9b0b136ee351392a73bde20f4a329" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#53</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288975596?v=4" alt="" class="avatar" />
+        <a href="https://github.com/wpeggg2-tech" target="_blank" rel="noopener">@wpeggg2-tech</a>
+      </td>
+      <td class="col-template">Weather Dashboard</td>
+      <td class="col-type"><span class="badge">weather-dashboard</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xe6e56c80eb5a3c60db75b2c361666ee73f1287e3b052b7b2742fcd76041cf80b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#54</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288943060?v=4" alt="" class="avatar" />
+        <a href="https://github.com/fudoric" target="_blank" rel="noopener">@fudoric</a>
+      </td>
+      <td class="col-template">Mempool Watcher</td>
+      <td class="col-type"><span class="badge">mempool-watcher</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xdc92bcd476412b6dfb090c4f7a04c7afeaf05a67d1ab05e29aec20ce5e04a469" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#55</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/195608975?v=4" alt="" class="avatar" />
+        <a href="https://github.com/0xdeckt" target="_blank" rel="noopener">@0xdeckt</a>
+      </td>
+      <td class="col-template">Reading List Tracker</td>
+      <td class="col-type"><span class="badge">reading-list-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x88574648676ec657dbdfa882e573c081eaa896953c79e596f470d165bd509298" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#56</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288978692?v=4" alt="" class="avatar" />
+        <a href="https://github.com/farcastpro-eng" target="_blank" rel="noopener">@farcastpro-eng</a>
+      </td>
+      <td class="col-template">Budget Planner</td>
+      <td class="col-type"><span class="badge">budget-planner</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xe2f9a5c4ed337f9085ea75f5db4d0b12ee879154e1c670f9a5bbce01bb822938" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#57</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288943669?v=4" alt="" class="avatar" />
+        <a href="https://github.com/charumilfy" target="_blank" rel="noopener">@charumilfy</a>
+      </td>
+      <td class="col-template">Pixel Paint</td>
+      <td class="col-type"><span class="badge">pixel-paint</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x22199290a9845eaff857b7aa383528a2fddb608f139bc184bd0ba3a63b8cbf3c" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#58</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288980917?v=4" alt="" class="avatar" />
+        <a href="https://github.com/davidaja102000-hub" target="_blank" rel="noopener">@davidaja102000-hub</a>
+      </td>
+      <td class="col-template">Recipe Card App</td>
+      <td class="col-type"><span class="badge">recipe-card-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x6ca039348d078b2850ce1820eadcac38fd133ac6dbe9736b88e1c5db66f8b1b0" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#59</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/194122310?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kamaltok04" target="_blank" rel="noopener">@kamaltok04</a>
+      </td>
+      <td class="col-template">Pomodoro Timer</td>
+      <td class="col-type"><span class="badge">pomodoro-timer</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xfdb10eab77b445a313a272139b57c5b908952fa0653e661cc68c0ebfc4d14953" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#60</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288945312?v=4" alt="" class="avatar" />
+        <a href="https://github.com/thieftf" target="_blank" rel="noopener">@thieftf</a>
+      </td>
+      <td class="col-template">Lyrics Board</td>
+      <td class="col-type"><span class="badge">lyrics-board</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xfa466176649370d0cb1e280d15c1665a487695dbeec98fb8f9d30ff74df1ee76" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#61</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288984092?v=4" alt="" class="avatar" />
+        <a href="https://github.com/wpeggg20-glitch" target="_blank" rel="noopener">@wpeggg20-glitch</a>
+      </td>
+      <td class="col-template">Event Schedule App</td>
+      <td class="col-type"><span class="badge">event-schedule-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xecb8be46d3035f75024dd6048efd155b1fb0c82b1703e2c4f5755cd3040a38c8" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#62</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288983723?v=4" alt="" class="avatar" />
+        <a href="https://github.com/alandria1405-oss" target="_blank" rel="noopener">@alandria1405-oss</a>
+      </td>
+      <td class="col-template">Workout Plan Generator</td>
+      <td class="col-type"><span class="badge">workout-plan-generator</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x5b3137711959d2835f68a97683efc580f468932c8c2bfaf3b00fc2461d4d1c2c" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#63</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288983785?v=4" alt="" class="avatar" />
+        <a href="https://github.com/jhonaja102000-bot" target="_blank" rel="noopener">@jhonaja102000-bot</a>
+      </td>
+      <td class="col-template">Quizz App</td>
+      <td class="col-type"><span class="badge">quizz-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x0a6419be8c09cfac69f018eb53644791e19a774ebf02b905b5867558cae9babf" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#64</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288985419?v=4" alt="" class="avatar" />
+        <a href="https://github.com/rizqpro16-code" target="_blank" rel="noopener">@rizqpro16-code</a>
+      </td>
+      <td class="col-template">Travel Bucket List</td>
+      <td class="col-type"><span class="badge">travel-bucket-list</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x04c2ff5c9a76c27db2e7d826fe269e98e1d3214516edf0abb27b911f5687da97" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#65</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288946110?v=4" alt="" class="avatar" />
+        <a href="https://github.com/biogaser" target="_blank" rel="noopener">@biogaser</a>
+      </td>
+      <td class="col-template">Markdown Slides</td>
+      <td class="col-type"><span class="badge">markdown-slides</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x9bbc859e21ca8008c595e67f178f3ac00798ca8fba014ddfcc7ee7b1cfb879ba" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#66</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288986354?v=4" alt="" class="avatar" />
+        <a href="https://github.com/misdarsalim-boop" target="_blank" rel="noopener">@misdarsalim-boop</a>
+      </td>
+      <td class="col-template">Notes App</td>
+      <td class="col-type"><span class="badge">notes-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x3be30ace06f31b0a439bdf076eaa6494fb37dd3f1363acc7f760298bf1d53ee0" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#67</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288988253?v=4" alt="" class="avatar" />
+        <a href="https://github.com/wpeggg17-hash" target="_blank" rel="noopener">@wpeggg17-hash</a>
+      </td>
+      <td class="col-template">Music Playlist Manager</td>
+      <td class="col-type"><span class="badge">music-playlist-manager</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x1fc235eadd55408c99eedf27a0b7ec3be9a443a876a808cbf02aee451fe884ac" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#68</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288961138?v=4" alt="" class="avatar" />
+        <a href="https://github.com/venezuelau" target="_blank" rel="noopener">@venezuelau</a>
+      </td>
+      <td class="col-template">Unit Converter</td>
+      <td class="col-type"><span class="badge">unit-converter</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xef1931e69ba83be64e45f179f4ffa8e32c8137483b937900dfafbe7467b6131d" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#69</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288988124?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kruger102000-cyber" target="_blank" rel="noopener">@kruger102000-cyber</a>
+      </td>
+      <td class="col-template">Packing List App</td>
+      <td class="col-type"><span class="badge">packing-list-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x19b92954234790fe09b50202a4afa3b4bfe0cdcaacb0aa37fe1e43212ca18dff" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#70</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288990004?v=4" alt="" class="avatar" />
+        <a href="https://github.com/wpeggg12-design" target="_blank" rel="noopener">@wpeggg12-design</a>
+      </td>
+      <td class="col-template">Plant Care Tracker</td>
+      <td class="col-type"><span class="badge">plant-care-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xc1ff9c889c1184e5cf29fbe1addcd61d57faffba0bcac2307130fd74535f2147" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#71</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288964955?v=4" alt="" class="avatar" />
+        <a href="https://github.com/dungeondo" target="_blank" rel="noopener">@dungeondo</a>
+      </td>
+      <td class="col-template">Kanban Board</td>
+      <td class="col-type"><span class="badge">kanban-board</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x0e2a3935efee0dab1cfc73851f34c60122512b65f9d451d277498634f212becf" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#72</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/252773260?v=4" alt="" class="avatar" />
+        <a href="https://github.com/khaledajaa-bit" target="_blank" rel="noopener">@khaledajaa-bit</a>
+      </td>
+      <td class="col-template">Pomodoro Focus Timer</td>
+      <td class="col-type"><span class="badge">pomodoro-focus-timer</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xf0927940b7f2af1dbbb94f08866f00b15682e7529b0990fd598d20a89c148a27" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#73</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288990951?v=4" alt="" class="avatar" />
+        <a href="https://github.com/greg10200005-wq" target="_blank" rel="noopener">@greg10200005-wq</a>
+      </td>
+      <td class="col-template">Packings List App</td>
+      <td class="col-type"><span class="badge">packings-list-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x1e0f4c22baed720ded95229b8ea2df0a79868494d47475950448685c208742d7" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#74</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288988968?v=4" alt="" class="avatar" />
+        <a href="https://github.com/sanjialexandre8-alt" target="_blank" rel="noopener">@sanjialexandre8-alt</a>
+      </td>
+      <td class="col-template">Notess App</td>
+      <td class="col-type"><span class="badge">notess-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x649b0ec553f6bd2d59bea7816213b4344be55762695027252925515be5912aac" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#75</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/288999173?v=4" alt="" class="avatar" />
+        <a href="https://github.com/saint10200005-sys" target="_blank" rel="noopener">@saint10200005-sys</a>
+      </td>
+      <td class="col-template">Recipe Cards App</td>
+      <td class="col-type"><span class="badge">recipe-cards-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x5be6e4094c48e1abcec35991622aafea8fac6cf249f0ae27901912d3a201606f" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#76</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/260495497?v=4" alt="" class="avatar" />
+        <a href="https://github.com/alfarisyi696" target="_blank" rel="noopener">@alfarisyi696</a>
+      </td>
+      <td class="col-template">Countdownn Timer App</td>
+      <td class="col-type"><span class="badge">countdownn-timer-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xace21447a6373370318d41e8a0528c2c02e5dfaa74b2292b877d0c4442cfc6d0" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#77</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/174969593?v=4" alt="" class="avatar" />
+        <a href="https://github.com/Dexxcuyy" target="_blank" rel="noopener">@Dexxcuyy</a>
+      </td>
+      <td class="col-template">GitHub Stats Dashboard</td>
+      <td class="col-type"><span class="badge">github-stats-dashboard</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xcac5863da2cb196cb9069e4c2462e18c3b43bc48b1feafa2d3ad7ad3a91a13b4" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#78</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/169647734?v=4" alt="" class="avatar" />
+        <a href="https://github.com/vivianbatcha" target="_blank" rel="noopener">@vivianbatcha</a>
+      </td>
+      <td class="col-template">Text Shrinker</td>
+      <td class="col-type"><span class="badge">text-shrinker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x4d2ed3c4122a46bbfbc6f4595fc51d281cdc48c25ac2359e65335d4252cf37de" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#79</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/240472145?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kamaltok04-twk" target="_blank" rel="noopener">@kamaltok04-twk</a>
+      </td>
+      <td class="col-template">Nowes App</td>
+      <td class="col-type"><span class="badge">nowes-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xa44f7563c46f199b704b59c6320204d6730fd2f53929dc9e820c35d76fd0b92a" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#80</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/277304173?v=4" alt="" class="avatar" />
+        <a href="https://github.com/Thecurtx" target="_blank" rel="noopener">@Thecurtx</a>
+      </td>
+      <td class="col-template">SaaS Dashboard</td>
+      <td class="col-type"><span class="badge">saas-dashboard</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xdfeb17aacad5a8abcddd5c97053babac4f90d3eec52029b4ec07b1a3cfaf785d" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#81</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/62498378?v=4" alt="" class="avatar" />
+        <a href="https://github.com/anwarfors123" target="_blank" rel="noopener">@anwarfors123</a>
+      </td>
+      <td class="col-template">Flashcard Study App</td>
+      <td class="col-type"><span class="badge">flashcard-study-app</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x830e92e7a06b1c45adf82f44e898e0d575db0b890c24f65e6602313bc2f4e65f" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#82</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/28119195?v=4" alt="" class="avatar" />
+        <a href="https://github.com/ZrAlex94" target="_blank" rel="noopener">@ZrAlex94</a>
+      </td>
+      <td class="col-template">SOP Runbook Builder</td>
+      <td class="col-type"><span class="badge">sop-runbook-builder</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x3f11ed64c6e7b8d8e49cc89d6ecacbc63dacc76fdd9499fa3a2fd9f10c76166b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#83</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/67137114?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kaka0608" target="_blank" rel="noopener">@kaka0608</a>
+      </td>
+      <td class="col-template">NFT Gallery</td>
+      <td class="col-type"><span class="badge">nft-gallery</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x5da1c0cbe2988b9375fd913bb89861f5f611f23d8d9e839ad12429991f551b26" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#84</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/185118529?v=4" alt="" class="avatar" />
+        <a href="https://github.com/orizta" target="_blank" rel="noopener">@orizta</a>
+      </td>
+      <td class="col-template">PrivSend — Simple Private Token Transfer</td>
+      <td class="col-type"><span class="badge">privsend</span></td>
+      <td class="col-reward status-pending">5 gitUSDC <span class="tx-pending">pending</span></td>
+      <td class="col-date"></td>
+    </tr>
+    <tr>
+      <td class="col-num">#85</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/194380483?v=4" alt="" class="avatar" />
+        <a href="https://github.com/TEA32" target="_blank" rel="noopener">@TEA32</a>
+      </td>
+      <td class="col-template">AI Chat UI</td>
+      <td class="col-type"><span class="badge">ai-chat-ui</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xed3baa573ea4ecbb7a00cd595bc7e4e7dad3d7d0c59e06dd71f50f9bd52ace1c" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#86</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/284929327?v=4" alt="" class="avatar" />
+        <a href="https://github.com/melodymherring" target="_blank" rel="noopener">@melodymherring</a>
+      </td>
+      <td class="col-template">FastAPI CRUD Starter</td>
+      <td class="col-type"><span class="badge">fastapi-crud-starter</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xa7d5c4d527184471074b3f7406fdb5cacf2812874a40bdaee28daff19d3ba762" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#87</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/76248304?v=4" alt="" class="avatar" />
+        <a href="https://github.com/rusdialamsyahh" target="_blank" rel="noopener">@rusdialamsyahh</a>
+      </td>
+      <td class="col-template">Rush D</td>
+      <td class="col-type"><span class="badge">AI Tool</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xf46e9028f1b4ce793dfe6fe5c0331552d771ada02a3730098534504620956b12" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#88</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/277305793?v=4" alt="" class="avatar" />
+        <a href="https://github.com/zth-droid" target="_blank" rel="noopener">@zth-droid</a>
+      </td>
+      <td class="col-template">Zero TH</td>
+      <td class="col-type"><span class="badge">zero-th</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xbc02c8fecc73953836358e17a6c9db3bb62f2d3b5fbee05b58a715e5ebc4ef3d" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#89</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/173686124?v=4" alt="" class="avatar" />
+        <a href="https://github.com/Degensss" target="_blank" rel="noopener">@Degensss</a>
+      </td>
+      <td class="col-template">Web3 Wallet Portfolio Tracker</td>
+      <td class="col-type"><span class="badge">web3-wallet-portfolio-tracker</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x9764496a29d8afb60f681f93bdd9f1b87fa582233bffc829bf5ebf942cf6fe2b" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#90</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/95500148?v=4" alt="" class="avatar" />
+        <a href="https://github.com/0xSyks" target="_blank" rel="noopener">@0xSyks</a>
+      </td>
+      <td class="col-template">Syks Kek</td>
+      <td class="col-type"><span class="badge">syks-kek</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x078c304dbc41a6810db91c94ded79137a521c5f4871f436d2bfe075cb57160b2" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#91</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/283411334?v=4" alt="" class="avatar" />
+        <a href="https://github.com/Genta-genz" target="_blank" rel="noopener">@Genta-genz</a>
+      </td>
+      <td class="col-template">Samudaya Kalepatan</td>
+      <td class="col-type"><span class="badge">samudaya-kalepatan</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x9857817082cc7510010f73ba39d1f5226b3da23cbc34f4df3944ff7886f02e33" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#92</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/278234340?v=4" alt="" class="avatar" />
+        <a href="https://github.com/asilet732" target="_blank" rel="noopener">@asilet732</a>
+      </td>
+      <td class="col-template">Brah Capytal</td>
+      <td class="col-type"><span class="badge">brah-capytal</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x3c4827548c27841b45630b53d02a8cf2fb68515123cefadc16d3b3a1428f0f04" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#93</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/202601338?v=4" alt="" class="avatar" />
+        <a href="https://github.com/kuekie211" target="_blank" rel="noopener">@kuekie211</a>
+      </td>
+      <td class="col-template">JW Template</td>
+      <td class="col-type"><span class="badge">web</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x149e05bbb519e557d6c72113bd1531bb36d149a0015e63a100e9daa04c1d524f" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#94</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/185729329?v=4" alt="" class="avatar" />
+        <a href="https://github.com/harrxzz" target="_blank" rel="noopener">@harrxzz</a>
+      </td>
+      <td class="col-template">Visual Cron Expression Builder</td>
+      <td class="col-type"><span class="badge">cron-builder</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x0acbde78b23b27e79f3931674c1e68610e9ad821544cec2e043b5b218deb8ea5" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#95</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/278237901?v=4" alt="" class="avatar" />
+        <a href="https://github.com/yulihajar35-cyber" target="_blank" rel="noopener">@yulihajar35-cyber</a>
+      </td>
+      <td class="col-template">Yuli Hajr</td>
+      <td class="col-type"><span class="badge">yuli-hajar</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x478c023df7e835399d4816deaec119257f0d9c445065d8053f1c0b4811d94f23" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#96</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/278240244?v=4" alt="" class="avatar" />
+        <a href="https://github.com/ganijuy-afk" target="_blank" rel="noopener">@ganijuy-afk</a>
+      </td>
+      <td class="col-template">Gani Juy</td>
+      <td class="col-type"><span class="badge">gani-juy</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x6b82aed2d317557e748e48d3238823d6a49f100e7e71a869ea47e0c4d3829099" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#97</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/223981328?v=4" alt="" class="avatar" />
+        <a href="https://github.com/bleksans" target="_blank" rel="noopener">@bleksans</a>
+      </td>
+      <td class="col-template">Weathher Dashboard</td>
+      <td class="col-type"><span class="badge">weathher-dashboard</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xbbf64065f5bec611082bfedaa445ac1169d018ec28beaff9ca81e11019e57eac" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#98</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/101510768?v=4" alt="" class="avatar" />
+        <a href="https://github.com/hendrasur" target="_blank" rel="noopener">@hendrasur</a>
+      </td>
+      <td class="col-template">AiBotChat</td>
+      <td class="col-type"><span class="badge">ChatBot</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xd24f230d6e3df3e7d5b45436a1f09484f5a48dbe67c3189bd1a78ca49abbc86a" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#99</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/161066886?v=4" alt="" class="avatar" />
+        <a href="https://github.com/hilmanzakarya" target="_blank" rel="noopener">@hilmanzakarya</a>
+      </td>
+      <td class="col-template">Sovereign Sentinel — Omnichain Liquidity &amp; Autonomous Risk Agent</td>
+      <td class="col-type"><span class="badge">sovereign-sentinel-risk-agent</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0xe0c08165246dd6594451f3f2c8186b6115eb47ef21a94ca6553957edea8910ff" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+    <tr>
+      <td class="col-num">#100</td>
+      <td class="col-user">
+        <img src="https://avatars.githubusercontent.com/u/284931321?v=4" alt="" class="avatar" />
+        <a href="https://github.com/rainamhoover" target="_blank" rel="noopener">@rainamhoover</a>
+      </td>
+      <td class="col-template">Discord Mod Bot</td>
+      <td class="col-type"><span class="badge">discord-mod-bot</span></td>
+      <td class="col-reward paid">5 gitUSDC <a href="https://basescan.org/tx/0x7ad081ac1df28f89fe2275472d06bd2c90ffad76f099b739e658d9d73e4abe7a" target="_blank" rel="noopener" class="tx-link">↗ tx</a></td>
+      <td class="col-date">May 29</td>
+    </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('themeBtn').textContent = isDark ? 'DARK' : 'LIGHT';
+      try { localStorage.setItem('theme', isDark ? 'light' : 'dark'); } catch {}
+    }
+    try {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('themeBtn').textContent = 'LIGHT';
+      }
+    } catch {}
+  </script>
+</body>
+</html>

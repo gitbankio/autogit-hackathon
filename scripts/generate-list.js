@@ -1,0 +1,609 @@
+#!/usr/bin/env node
+/**
+ * generate-list.js
+ * Reads data/participants.json and generates docs/index.html
+ * Run: node scripts/generate-list.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const DATA = path.join(ROOT, 'data', 'participants.json');
+const OUT  = path.join(ROOT, 'docs', 'index.html');
+
+let participants = [];
+try {
+  participants = JSON.parse(fs.readFileSync(DATA, 'utf8'));
+} catch {
+  participants = [];
+}
+
+const total = 100;
+const filled = participants.length;
+const pct = Math.round((filled / total) * 100);
+
+// Build 20 pixel blocks for progress bar
+const blocks = Array.from({ length: 20 }, (_, i) => {
+  const filled_block = i < Math.round(pct / 5);
+  return `<span class="px-block${filled_block ? ' filled' : ''}"></span>`;
+}).join('');
+
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function row(p) {
+  const basescan = p.tx_hash
+    ? `<a href="https://basescan.org/tx/${p.tx_hash}" target="_blank" rel="noopener" class="tx-link">↗ tx</a>`
+    : '<span class="tx-pending">pending</span>';
+  const paidAt = p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const statusClass = p.tx_hash ? 'paid' : 'status-pending';
+  return `
+    <tr>
+      <td class="col-num">#${p.entry_number}</td>
+      <td class="col-user">
+        <img src="${escHtml(p.github_avatar)}" alt="" class="avatar" />
+        <a href="https://github.com/${escHtml(p.github_login)}" target="_blank" rel="noopener">@${escHtml(p.github_login)}</a>
+      </td>
+      <td class="col-template">${escHtml(p.template_title)}</td>
+      <td class="col-type"><span class="badge">${escHtml(p.app_type)}</span></td>
+      <td class="col-reward ${statusClass}">5 gitUSDC ${basescan}</td>
+      <td class="col-date">${paidAt}</td>
+    </tr>`;
+}
+
+const tableBody = participants.length
+  ? participants.map(row).join('')
+  : `<tr><td colspan="6" class="empty-row">No entries yet. Be the first.</td></tr>`;
+
+const CAT_SVG = `<svg width="32" height="32" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="36" fill="#2222FF"/>
+  <path d="M54 72 L66 54 L78 72Z" fill="white"/>
+  <path d="M102 72 L114 54 L126 72Z" fill="white"/>
+  <ellipse cx="90" cy="98" rx="40" ry="36" fill="white"/>
+  <path d="M82 72 Q90 80 98 72" fill="#2222FF"/>
+  <circle cx="76" cy="100" r="8" fill="#2222FF"/>
+  <circle cx="104" cy="100" r="8" fill="#2222FF"/>
+</svg>`;
+
+const FAVICON_SVG = `data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='180' height='180' rx='36' fill='%232222FF'/%3E%3Cpath d='M54 72 L66 54 L78 72Z' fill='white'/%3E%3Cpath d='M102 72 L114 54 L126 72Z' fill='white'/%3E%3Cellipse cx='90' cy='98' rx='40' ry='36' fill='white'/%3E%3Cpath d='M82 72 Q90 80 98 72' fill='%232222FF'/%3E%3Ccircle cx='76' cy='100' r='8' fill='%232222FF'/%3E%3Ccircle cx='104' cy='100' r='8' fill='%232222FF'/%3E%3C/svg%3E`;
+
+const html = `<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoGit Hackathon</title>
+  <meta name="description" content="Submit a prompt template for AutoGit. Get paid automatically in gitUSDC when your PR merges." />
+  <link rel="icon" href="${FAVICON_SVG}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f0ede8;
+      --bg2: #e8e4dd;
+      --bg3: #dedad3;
+      --surface: #faf8f5;
+      --surface2: #f0ede8;
+      --border: #c8c0b4;
+      --border2: #b8b0a4;
+      --text: #1a1614;
+      --text2: #5a524a;
+      --text3: #8a827a;
+      --accent: #2222ff;
+      --accent2: #0000cc;
+      --accent-bg: #e8e8ff;
+      --gold: #c07800;
+      --gold-bg: #fff3cc;
+      --green: #007840;
+      --green-bg: #d4f0e0;
+      --red: #cc2200;
+      --pixel-shadow: 3px 3px 0 var(--border);
+      --pixel-shadow-accent: 3px 3px 0 var(--accent2);
+    }
+    [data-theme="dark"] {
+      --bg: #0e0c0a;
+      --bg2: #161412;
+      --bg3: #201e1a;
+      --surface: #1a1816;
+      --surface2: #201e1a;
+      --border: #38342e;
+      --border2: #4a4640;
+      --text: #f0ece6;
+      --text2: #b0a898;
+      --text3: #706860;
+      --accent: #5555ff;
+      --accent2: #8888ff;
+      --accent-bg: #1a1a3a;
+      --gold: #f0aa00;
+      --gold-bg: #2a2200;
+      --green: #00cc66;
+      --green-bg: #002a16;
+      --red: #ff5533;
+      --pixel-shadow: 3px 3px 0 #000;
+      --pixel-shadow-accent: 3px 3px 0 #0000aa;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ── Topbar ─────────────────────────────────────────── */
+    .topbar {
+      background: var(--accent);
+      color: #fff;
+      padding: 0 24px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--accent2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: #fff;
+      letter-spacing: 0.03em;
+    }
+    .topbar-brand svg { flex-shrink: 0; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .btn-theme {
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.4);
+      color: #fff;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      transition: background 0.1s;
+      image-rendering: pixelated;
+    }
+    .btn-theme:hover { background: rgba(255,255,255,0.25); }
+    .topbar-link {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 4px 8px;
+      border: 2px solid transparent;
+    }
+    .topbar-link:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 48px);
+    }
+
+    /* ── Left panel ─────────────────────────────────────── */
+    .left {
+      background: var(--surface);
+      border-right: 3px solid var(--border);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .hero-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      color: var(--accent);
+      line-height: 1.6;
+      text-shadow: 3px 3px 0 var(--accent-bg);
+    }
+    .hero-sub {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-top: 8px;
+    }
+    .hero-sub a { color: var(--accent); text-decoration: none; }
+    .hero-sub a:hover { text-decoration: underline; }
+
+    /* pixel cat decoration */
+    .pixel-cat {
+      width: 64px;
+      height: 64px;
+      image-rendering: pixelated;
+    }
+
+    /* slot counter */
+    .slot-box {
+      background: var(--bg2);
+      border: 3px solid var(--border);
+      padding: 16px;
+      box-shadow: var(--pixel-shadow);
+    }
+    .slot-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+    }
+    .slot-count {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 20px;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .slot-count span { font-size: 12px; color: var(--text3); }
+    .px-bar {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+    .px-block {
+      width: 12px;
+      height: 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      image-rendering: pixelated;
+    }
+    .px-block.filled {
+      background: var(--accent);
+      border-color: var(--accent2);
+    }
+
+    /* reward cards */
+    .rewards-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .rewards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .r-card {
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .r-card.auto { border-color: var(--accent); background: var(--accent-bg); }
+    .r-card.gold1 { border-color: var(--gold); background: var(--gold-bg); }
+    .r-card.gold2 { border-color: var(--gold); background: var(--gold-bg); opacity: 0.85; }
+    .r-card.gold3 { border-color: var(--gold); background: var(--gold-bg); opacity: 0.7; }
+    .r-amount {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .r-card.auto .r-amount { color: var(--accent); }
+    .r-card.gold1 .r-amount, .r-card.gold2 .r-amount, .r-card.gold3 .r-amount { color: var(--gold); }
+    .r-desc {
+      font-size: 10px;
+      color: var(--text2);
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    /* action buttons */
+    .actions { display: flex; flex-direction: column; gap: 8px; }
+    .btn-primary {
+      display: block;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      padding: 11px 16px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      text-align: center;
+      border: 3px solid var(--accent2);
+      box-shadow: var(--pixel-shadow-accent);
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+    .btn-primary:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--accent2); }
+    .btn-secondary {
+      display: block;
+      background: var(--surface2);
+      color: var(--text);
+      text-decoration: none;
+      padding: 9px 16px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      text-align: center;
+      border: 2px solid var(--border);
+      box-shadow: var(--pixel-shadow);
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+    .btn-secondary:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--border2); }
+
+    .footer-links {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 2px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-links a {
+      font-size: 10px;
+      color: var(--text3);
+      text-decoration: none;
+    }
+    .footer-links a:hover { color: var(--accent); text-decoration: underline; }
+
+    /* ── Right panel ────────────────────────────────────── */
+    .right {
+      padding: 32px 28px;
+      overflow-x: auto;
+    }
+
+    .panel-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-title .count-badge {
+      background: var(--accent);
+      color: #fff;
+      padding: 3px 8px;
+      font-size: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead {
+      background: var(--bg2);
+      border-bottom: 3px solid var(--border);
+    }
+    th {
+      padding: 10px 12px;
+      text-align: left;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:hover td { background: var(--surface); }
+    .col-num {
+      color: var(--text3);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      width: 52px;
+    }
+    .col-user {
+      white-space: nowrap;
+      min-width: 140px;
+    }
+    .col-user { display: flex; align-items: center; gap: 8px; }
+    .col-user a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .col-user a:hover { text-decoration: underline; }
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      image-rendering: auto;
+    }
+    .col-template { color: var(--text); max-width: 200px; }
+    .col-type { white-space: nowrap; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--accent-bg);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      font-size: 10px;
+    }
+    .col-reward { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .paid { color: var(--green); }
+    .status-pending { color: var(--text3); }
+    .tx-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 10px;
+      border-bottom: 1px dashed var(--accent);
+    }
+    .tx-link:hover { border-bottom-style: solid; }
+    .tx-pending { color: var(--text3); font-size: 10px; }
+    .col-date { color: var(--text3); font-size: 11px; white-space: nowrap; }
+
+    .empty-row td, td.empty-row {
+      text-align: center;
+      color: var(--text3);
+      padding: 60px 20px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      line-height: 2;
+    }
+
+    /* pixel grid bg decoration on right panel */
+    .right {
+      background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-color: var(--bg);
+    }
+    .right-inner {
+      background: var(--bg);
+      padding: 24px;
+      border: 3px solid var(--border);
+      box-shadow: var(--pixel-shadow);
+    }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .left { border-right: none; border-bottom: 3px solid var(--border); }
+      .col-date, .col-template { display: none; }
+      .hero-title { font-size: 14px; }
+    }
+    @media (max-width: 480px) {
+      .topbar-link { display: none; }
+      .hero-title { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <svg width="26" height="26" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="180" height="180" rx="36" fill="rgba(255,255,255,0.2)"/>
+        <path d="M54 72 L66 54 L78 72Z" fill="white"/>
+        <path d="M102 72 L114 54 L126 72Z" fill="white"/>
+        <ellipse cx="90" cy="98" rx="40" ry="36" fill="white"/>
+        <path d="M82 72 Q90 80 98 72" fill="#2222FF"/>
+        <circle cx="76" cy="100" r="8" fill="#2222FF"/>
+        <circle cx="104" cy="100" r="8" fill="#2222FF"/>
+      </svg>
+      GITBANK x AUTOGIT
+    </div>
+    <div class="topbar-right">
+      <a href="https://github.com/gitbankio/autogit-hackathon/blob/main/HACKATHON.md" target="_blank" rel="noopener" class="topbar-link">Rules</a>
+      <a href="https://gitbank.io/autogit/" target="_blank" rel="noopener" class="topbar-link">Try AutoGit</a>
+      <button class="btn-theme" id="themeBtn" onclick="toggleTheme()">DARK</button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- Left panel -->
+    <aside class="left">
+
+      <div>
+        <div class="hero-title">AUTO&shy;GIT<br>HACKA&shy;THON</div>
+        <p class="hero-sub">
+          Submit a prompt template for
+          <a href="https://gitbank.io/autogit/" target="_blank" rel="noopener">AutoGit</a>.
+          Get paid automatically in gitUSDC when your PR merges.
+        </p>
+      </div>
+
+      <div class="slot-box">
+        <div class="slot-label">Slots filled</div>
+        <div class="slot-count">${filled} <span>/ ${total}</span></div>
+        <div class="px-bar">${blocks}</div>
+      </div>
+
+      <div>
+        <div class="rewards-title">Rewards</div>
+        <div class="rewards-grid">
+          <div class="r-card auto">
+            <div class="r-amount">5 gitUSDC</div>
+            <div class="r-desc">Every entry<br>Auto-paid on merge</div>
+          </div>
+          <div class="r-card gold1">
+            <div class="r-amount">300 gitUSDC</div>
+            <div class="r-desc">Best template<br>Team pick</div>
+          </div>
+          <div class="r-card gold2">
+            <div class="r-amount">200 gitUSDC</div>
+            <div class="r-desc">2nd best<br>Team pick</div>
+          </div>
+          <div class="r-card gold3">
+            <div class="r-amount">100 gitUSDC</div>
+            <div class="r-desc">3rd best<br>Team pick</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="https://github.com/gitbankio/autogit-hackathon/fork" target="_blank" rel="noopener" class="btn-primary">+ SUBMIT TEMPLATE</a>
+        <a href="https://github.com/gitbankio/autogit-hackathon/blob/main/HACKATHON.md" target="_blank" rel="noopener" class="btn-secondary">READ RULES</a>
+        <a href="https://gitbank.io/autogit/" target="_blank" rel="noopener" class="btn-secondary">TRY AUTOGIT</a>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/gitbankio/autogit-hackathon" target="_blank" rel="noopener">GitHub Repo</a>
+        <a href="https://github.com/gitbankio" target="_blank" rel="noopener">gitbankio</a>
+        <a href="https://gitbank.io" target="_blank" rel="noopener">gitbank.io</a>
+      </div>
+
+    </aside>
+
+    <!-- Right panel -->
+    <main class="right">
+      <div class="right-inner">
+        <div class="panel-title">
+          Participants
+          <span class="count-badge">${filled} / ${total}</span>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Author</th>
+              <th>Template</th>
+              <th>App Type</th>
+              <th>Reward</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableBody}
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('themeBtn').textContent = isDark ? 'DARK' : 'LIGHT';
+      try { localStorage.setItem('theme', isDark ? 'light' : 'dark'); } catch {}
+    }
+    try {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('themeBtn').textContent = 'LIGHT';
+      }
+    } catch {}
+  </script>
+</body>
+</html>`;
+
+fs.mkdirSync(path.dirname(OUT), { recursive: true });
+fs.writeFileSync(OUT, html);
+console.log(`Generated docs/index.html (${filled}/${total} entries)`);
